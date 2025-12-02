@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monkey Pose Switcher</title>
+    <style>
+      :root {
+        --bg: #0b1021;
+        --panel: #0f172a;
+        --panel-2: #111827;
+        --accent: #f97316;
+        --accent-2: #22d3ee;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: #1f2937;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        background: radial-gradient(
+            circle at 15% 20%,
+            rgba(34, 211, 238, 0.12),
+            transparent 22%
+          ),
+          radial-gradient(
+            circle at 85% 10%,
+            rgba(249, 115, 22, 0.14),
+            transparent 24%
+          ),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px;
+      }
+      .frame {
+        width: min(1200px, 100%);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 20px;
+        background: linear-gradient(
+          135deg,
+          rgba(17, 24, 39, 0.9),
+          rgba(15, 23, 42, 0.95)
+        );
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+        position: relative;
+      }
+      .glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+            circle at 30% 30%,
+            rgba(34, 211, 238, 0.15),
+            transparent 25%
+          ),
+          radial-gradient(
+            circle at 70% 20%,
+            rgba(249, 115, 22, 0.15),
+            transparent 25%
+          );
+        filter: blur(60px);
+        pointer-events: none;
+      }
+      .panel {
+        padding: 22px;
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .chip {
+        background: rgba(34, 211, 238, 0.16);
+        color: var(--text);
+        border: 1px solid rgba(34, 211, 238, 0.35);
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .video-wrap {
+        position: relative;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        background: #0b1220;
+      }
+      video,
+      canvas {
+        width: 100%;
+        display: block;
+      }
+      video {
+        transform: scaleX(-1);
+        position: absolute;
+        inset: 0;
+        visibility: hidden;
+      }
+      canvas {
+        transform: scaleX(-1);
+      }
+      .legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        background: #0b1220;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .card {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .card small {
+        color: var(--muted);
+      }
+      .pose-image {
+        width: 100%;
+        max-width: 420px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: #0b1220;
+        align-self: center;
+        display: block;
+        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .status-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 15px;
+      }
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+      }
+      .pill {
+        padding: 6px 10px;
+        background: rgba(249, 115, 22, 0.12);
+        border: 1px solid rgba(249, 115, 22, 0.3);
+        border-radius: 999px;
+        color: var(--text);
+        font-size: 12px;
+      }
+      .footer {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .image-frame {
+        position: relative;
+        display: inline-block;
+      }
+      .image-frame::after {
+        content: "";
+        position: absolute;
+        inset: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script type="module">
+      const { useEffect, useRef, useState } = React;
+
+      const poseImages = {
+        pointing: "images/monkey-point.jpg",
+        thinking: "images/monkey-think.jpeg",
+        neutral: "images/monkey-neutral.webp",
+      };
+
+      const poseNames = {
+        pointing: "Arm raised / pointing",
+        thinking: "Hand near mouth (thinking)",
+        neutral: "Neutral / arms relaxed",
+      };
+
+      function distance(a, b) {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function angleAtJoint(a, b, c) {
+        const ab = { x: a.x - b.x, y: a.y - b.y };
+        const cb = { x: c.x - b.x, y: c.y - b.y };
+        const dot = ab.x * cb.x + ab.y * cb.y;
+        const mag =
+          Math.sqrt(ab.x * ab.x + ab.y * ab.y) *
+          Math.sqrt(cb.x * cb.x + cb.y * cb.y);
+        if (!mag) return 180;
+        return (
+          (Math.acos(Math.min(Math.max(dot / mag, -1), 1)) * 180) / Math.PI
+        );
+      }
+
+      function classifyPose(landmarks) {
+        if (!landmarks || landmarks.length === 0)
+          return { label: "Unknown pose", confidence: 0 };
+
+        const leftWrist = landmarks[15];
+        const rightWrist = landmarks[16];
+        const leftElbow = landmarks[13];
+        const rightElbow = landmarks[14];
+        const leftShoulder = landmarks[11];
+        const rightShoulder = landmarks[12];
+        const leftHip = landmarks[23];
+        const rightHip = landmarks[24];
+        const nose = landmarks[0];
+        const mouthLeft = landmarks[9] || nose;
+        const mouthRight = landmarks[10] || nose;
+        const mouth = {
+          x: (mouthLeft.x + mouthRight.x) / 2,
+          y: (mouthLeft.y + mouthRight.y) / 2,
+        };
+
+        const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        const hipY = (leftHip.y + rightHip.y) / 2;
+        const shoulderSpan = Math.max(
+          distance(leftShoulder, rightShoulder),
+          0.001
+        );
+        const torsoLength = Math.max(hipY - shoulderY, 0.15);
+
+        const wristAboveHead =
+          (leftWrist.y < nose.y && leftWrist.y < leftElbow.y - 0.02) ||
+          (rightWrist.y < nose.y && rightWrist.y < rightElbow.y - 0.02);
+
+        const proximityThreshold = Math.max(shoulderSpan * 0.65, 0.12);
+        const verticalAllowance = torsoLength * 0.2;
+        const leftElbowAngle = angleAtJoint(leftShoulder, leftElbow, leftWrist);
+        const rightElbowAngle = angleAtJoint(
+          rightShoulder,
+          rightElbow,
+          rightWrist
+        );
+
+        const leftHandNearMouth =
+          distance(leftWrist, mouth) < proximityThreshold &&
+          Math.abs(leftWrist.y - mouth.y) < verticalAllowance &&
+          leftWrist.y < shoulderY + torsoLength * 0.15 &&
+          leftElbowAngle < 150;
+        const rightHandNearMouth =
+          distance(rightWrist, mouth) < proximityThreshold &&
+          Math.abs(rightWrist.y - mouth.y) < verticalAllowance &&
+          rightWrist.y < shoulderY + torsoLength * 0.15 &&
+          rightElbowAngle < 150;
+
+        const handNearMouth = leftHandNearMouth || rightHandNearMouth;
+
+        const wristsBelowHips =
+          leftWrist.y > hipY + 0.08 && rightWrist.y > hipY + 0.08;
+        const wristsBelowShoulders =
+          leftWrist.y > shoulderY + 0.04 &&
+          rightWrist.y > shoulderY + 0.04 &&
+          leftElbow.y > shoulderY - 0.02 &&
+          rightElbow.y > shoulderY - 0.02;
+
+        if (wristAboveHead) return { label: "pointing", confidence: 0.9 };
+        if (handNearMouth) return { label: "thinking", confidence: 0.92 };
+        if (wristsBelowHips || wristsBelowShoulders)
+          return { label: "neutral", confidence: 0.7 };
+
+        return { label: "Unknown pose", confidence: 0.3 };
+      }
+
+      function App() {
+        const videoRef = useRef(null);
+        const canvasRef = useRef(null);
+        const [poseLabel, setPoseLabel] = useState("Waiting for camera...");
+        const [confidence, setConfidence] = useState("-");
+        const [imgSrc, setImgSrc] = useState(poseImages.neutral);
+        const [statusText, setStatusText] = useState("Requesting webcam...");
+
+        useEffect(() => {
+          let pose;
+          let stream;
+          let animationId;
+
+          async function setupPose() {
+            const videoEl = videoRef.current;
+            if (!videoEl) return;
+            if (!window.isSecureContext) {
+              setPoseLabel("Secure context required");
+              setStatusText(
+                "Open via http://localhost or https:// to use webcam."
+              );
+              return;
+            }
+            if (
+              !navigator.mediaDevices ||
+              !navigator.mediaDevices.getUserMedia
+            ) {
+              setPoseLabel("Camera unsupported");
+              setStatusText("This browser does not expose getUserMedia.");
+              return;
+            }
+
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480, facingMode: "user" },
+                audio: false,
+              });
+              videoEl.srcObject = stream;
+              await videoEl.play();
+              setStatusText("Camera on; hold a pose.");
+            } catch (err) {
+              console.error("getUserMedia error", err);
+              setPoseLabel("Camera blocked?");
+              setStatusText("Allow webcam access and reload.");
+              return;
+            }
+
+            try {
+              pose = new Pose({
+                locateFile: (file) =>
+                  `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+              });
+              pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5,
+              });
+              pose.onResults(onResults);
+              const loop = async () => {
+                if (!pose || !videoEl || videoEl.readyState < 2) {
+                  animationId = requestAnimationFrame(loop);
+                  return;
+                }
+                try {
+                  await pose.send({ image: videoEl });
+                } catch (err) {
+                  console.error("pose.send error", err);
+                }
+                animationId = requestAnimationFrame(loop);
+              };
+              loop();
+            } catch (err) {
+              console.error(err);
+              setPoseLabel("Camera blocked?");
+              setStatusText("Enable webcam permissions and reload.");
+            }
+          }
+
+          function onResults(results) {
+            if (!results || !canvasRef.current || !videoRef.current) return;
+            const ctx = canvasRef.current.getContext("2d");
+
+            if (canvasRef.current.width !== videoRef.current.videoWidth) {
+              canvasRef.current.width = videoRef.current.videoWidth;
+              canvasRef.current.height = videoRef.current.videoHeight;
+            }
+
+            ctx.save();
+            ctx.clearRect(
+              0,
+              0,
+              canvasRef.current.width,
+              canvasRef.current.height
+            );
+            ctx.drawImage(
+              results.image,
+              0,
+              0,
+              canvasRef.current.width,
+              canvasRef.current.height
+            );
+            if (results.poseLandmarks) {
+              drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
+                color: "#22d3ee",
+                lineWidth: 4,
+              });
+              drawLandmarks(ctx, results.poseLandmarks, {
+                color: "#f97316",
+                lineWidth: 2,
+                radius: 3,
+              });
+            }
+            ctx.restore();
+
+            if (results.poseLandmarks) {
+              const { label, confidence } = classifyPose(results.poseLandmarks);
+              const pretty = poseNames[label] || label;
+              setPoseLabel(pretty);
+              setConfidence(`${(confidence * 100).toFixed(0)}%`);
+              if (poseImages[label]) setImgSrc(poseImages[label]);
+            } else {
+              setPoseLabel("No pose found");
+              setConfidence("-");
+            }
+          }
+
+          setupPose();
+          return () => {
+            try {
+              pose && pose.close && pose.close();
+            } catch (_) {}
+            try {
+              if (animationId) cancelAnimationFrame(animationId);
+            } catch (_) {}
+            try {
+              if (stream) {
+                stream.getTracks().forEach((t) => t.stop());
+              }
+            } catch (_) {}
+          };
+        }, []);
+
+        return React.createElement(
+          "div",
+          { className: "frame" },
+          React.createElement("div", { className: "glow" }),
+          React.createElement(
+            "div",
+            { className: "panel" },
+            React.createElement(
+              "div",
+              { className: "title" },
+              React.createElement(
+                "div",
+                { className: "chip" },
+                "🎥 MediaPipe Pose"
+              ),
+              React.createElement("div", { className: "pill" }, statusText)
+            ),
+            React.createElement("h1", null, "Monkey Pose Switcher"),
+            React.createElement(
+              "p",
+              null,
+              "Raise your arm to point, bring a hand to your mouth to think, or relax your arms for neutral. The image swaps locally; nothing leaves your browser."
+            ),
+            React.createElement(
+              "div",
+              { className: "video-wrap" },
+              React.createElement("video", {
+                ref: videoRef,
+                playsInline: true,
+                muted: true,
+                autoPlay: true,
+              }),
+              React.createElement("canvas", { ref: canvasRef })
+            ),
+            React.createElement(
+              "div",
+              { className: "legend" },
+              React.createElement(
+                "span",
+                null,
+                React.createElement("span", {
+                  className: "dot",
+                  style: { background: "#22d3ee" },
+                }),
+                "Connections"
+              ),
+              React.createElement(
+                "span",
+                null,
+                React.createElement("span", {
+                  className: "dot",
+                  style: { background: "#f97316" },
+                }),
+                "Landmarks"
+              )
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "panel" },
+            React.createElement(
+              "div",
+              { className: "card" },
+              React.createElement(
+                "div",
+                { className: "status-line" },
+                React.createElement(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    },
+                  },
+                  React.createElement("span", { className: "status-dot" }),
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement("small", null, "Current pose"),
+                    React.createElement(
+                      "div",
+                      { style: { fontSize: "18px", fontWeight: 600 } },
+                      poseLabel
+                    )
+                  )
+                ),
+                React.createElement(
+                  "span",
+                  { className: "pill" },
+                  "Confidence ",
+                  confidence
+                )
+              )
+            ),
+            React.createElement(
+              "div",
+              { className: "image-frame" },
+              React.createElement("img", {
+                className: "pose-image",
+                src: imgSrc,
+                alt: "Pose result",
+              })
+            ),
+            React.createElement(
+              "div",
+              { className: "card" },
+              React.createElement(
+                "div",
+                null,
+                React.createElement("small", null, "Try these"),
+                React.createElement(
+                  "ul",
+                  null,
+                  React.createElement(
+                    "li",
+                    null,
+                    "Raise one arm above your head (pointing)"
+                  ),
+                  React.createElement(
+                    "li",
+                    null,
+                    "Bring a hand near your mouth (thinking)"
+                  ),
+                  React.createElement(
+                    "li",
+                    null,
+                    "Rest arms down by your sides (neutral)"
+                  )
+                )
+              )
+            ),
+            React.createElement(
+              "div",
+              { className: "footer" },
+              "Tip: place your images in /images (monkey-point.jpg, monkey-think.jpg, monkey-neutral.jpg)."
+            )
+          )
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(React.createElement(App));
+    </script>
+  </body>
+</html>

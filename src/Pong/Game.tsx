@@ -1,17 +1,30 @@
 // Game.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { useHandTracking } from "../hooks/useHandTracking";
+import IntroView from "./components/IntroView";
+import GameOverView from "./components/GameOverView";
+import { audioService } from "../flappy/services/audioService";
 
 const WIDTH = 800;
 const HEIGHT = 480;
 
+const APP_STATE = {
+  INTRO: "INTRO",
+  PLAYING: "PLAYING",
+  GAME_OVER: "GAME_OVER",
+} as const;
+
+type AppState = (typeof APP_STATE)[keyof typeof APP_STATE];
+
 type GameProps = {
   onBack?: () => void;
   cameraId?: string;
+  cameraLabel?: string;
 };
 
-const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
+const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [appState, setAppState] = useState<AppState>(APP_STATE.INTRO);
   const [score, setScore] = useState(0);
   const [misses, setMisses] = useState(0);
   const [frameSrc, setFrameSrc] = useState<string | null>(null);
@@ -25,6 +38,7 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
   const ballVy = useRef(4);
   const scoreRef = useRef(0);
   const missesRef = useRef(0);
+  const gameActive = useRef(false);
 
   useEffect(() => {
     if (typeof x === "number") {
@@ -36,7 +50,40 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
     setFrameSrc(frame ?? null);
   }, [frame]);
 
+  const startGame = () => {
+    audioService.init();
+    audioService.resume();
+    setAppState(APP_STATE.PLAYING);
+    setScore(0);
+    setMisses(0);
+    scoreRef.current = 0;
+    missesRef.current = 0;
+    ballX.current = WIDTH / 2;
+    ballY.current = HEIGHT / 2;
+    ballVx.current = (Math.random() > 0.5 ? 1 : -1) * 4;
+    ballVy.current = -4;
+    gameActive.current = true;
+  };
+
+  const handleGameOver = () => {
+    gameActive.current = false;
+    audioService.playCrash(); // Play crash sound on game over
+    setAppState(APP_STATE.GAME_OVER);
+  };
+
+  const handleReturnToIntro = () => {
+    gameActive.current = false;
+    setAppState(APP_STATE.INTRO);
+  };
+
+  const handleExitToArcade = () => {
+    handleReturnToIntro();
+    onBack?.();
+  };
+
   useEffect(() => {
+    if (appState !== APP_STATE.PLAYING) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -55,6 +102,13 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
     };
 
     const loop = () => {
+      if (!gameActive.current) {
+        // If game is not active, we don't loop anymore.
+        // The cleanup function will handle cancelling the current frame if needed,
+        // but here we just stop the loop.
+        return;
+      }
+
       // update ball physics
       ballX.current += ballVx.current;
       ballY.current += ballVy.current;
@@ -62,9 +116,11 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
       // walls
       if (ballX.current < BALL_RADIUS || ballX.current > WIDTH - BALL_RADIUS) {
         ballVx.current *= -1;
+        audioService.playPong(); // Wall hit sound
       }
       if (ballY.current < BALL_RADIUS) {
         ballVy.current *= -1;
+        audioService.playPong(); // Ceiling hit sound
       }
 
       // paddle collision
@@ -79,6 +135,12 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
           ballY.current = PADDLE_Y - BALL_RADIUS;
           scoreRef.current += 1;
           setScore(scoreRef.current);
+          audioService.playPing(); // Paddle hit sound
+
+          // Speed up slightly
+          const speedMultiplier = 1.05;
+          ballVx.current *= speedMultiplier;
+          ballVy.current *= speedMultiplier;
         }
       }
 
@@ -86,35 +148,61 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
       if (ballY.current > HEIGHT + BALL_RADIUS) {
         missesRef.current += 1;
         setMisses(missesRef.current);
+        audioService.playMiss(); // Miss sound
         resetBall();
+
+        // Game Over condition (e.g., 3 misses)
+        if (missesRef.current >= 3) {
+          handleGameOver();
+          return; // Stop loop immediately
+        }
       }
 
       // clear screen
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      // Draw Grid Background (Cyber style)
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.1)"; // Cyan low opacity
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      ctx.beginPath();
+      for (let x = 0; x <= WIDTH; x += gridSize) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, HEIGHT);
+      }
+      for (let y = 0; y <= HEIGHT; y += gridSize) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(WIDTH, y);
+      }
+      ctx.stroke();
 
       // draw paddle
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = "#22d3ee"; // Cyan-400
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#22d3ee";
       ctx.fillRect(
         paddleX.current - PADDLE_WIDTH / 2,
         PADDLE_Y - PADDLE_HEIGHT / 2,
         PADDLE_WIDTH,
         PADDLE_HEIGHT
       );
+      ctx.shadowBlur = 0;
 
       // draw ball
-      ctx.fillStyle = "#fbbf24";
+      ctx.fillStyle = "#f472b6"; // Pink-400
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#f472b6";
       ctx.beginPath();
       ctx.arc(ballX.current, ballY.current, BALL_RADIUS, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
 
       requestAnimationFrame(loop);
     };
 
     const animationId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationId);
-  }, []);
+  }, [appState]);
 
   const trackingStatus = error
     ? { text: "Camera unavailable", className: "text-red-500" }
@@ -123,118 +211,88 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId }) => {
       : { text: "Awaiting camera", className: "text-amber-500" };
 
   return (
-    <div
-      className="min-h-screen px-6 py-10 text-slate-900"
-      style={{
-        backgroundColor: "#fdfdfd",
-        backgroundImage:
-          "linear-gradient(90deg, rgba(15,23,42,0.05) 1px, transparent 1px), linear-gradient(rgba(15,23,42,0.05) 1px, transparent 1px)",
-        backgroundSize: "26px 26px",
-      }}
-    >
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 font-sans">
-        <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-xl shadow-slate-200/80 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-pink-500">
-              Gesture Arcade
-            </p>
-            <h1 className="text-3xl font-semibold text-slate-900">
-              Hand-Controlled Pong
-            </h1>
-            <p className="text-sm text-slate-500">
-              Steer the paddle with your hand just like a futuristic Zoom call
-              mini-game.
-            </p>
-          </div>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:bg-slate-100"
-            >
-              ← Back to Dashboard
-            </button>
-          )}
-        </div>
+    <main className="w-full h-[100dvh] bg-black overflow-hidden relative font-sans">
+      {appState === APP_STATE.INTRO && (
+        <IntroView
+          onEnter={startGame}
+          onBack={onBack ? handleExitToArcade : undefined}
+          cameraLabel={cameraLabel}
+        />
+      )}
 
-        <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-          <div className="relative rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-2xl shadow-slate-200/90">
-            <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:24px_24px]" />
-              <canvas
-                ref={canvasRef}
-                width={WIDTH}
-                height={HEIGHT}
-                className="relative block w-full rounded-[28px] bg-transparent"
-              />
-              <div className="pointer-events-none absolute left-6 top-6 flex flex-col gap-2 text-left text-white drop-shadow">
-                <div className="rounded-2xl border border-white/30 bg-white/10 px-4 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/70">
-                    Score
-                  </p>
-                  <p className="text-3xl font-semibold text-cyan-300">
-                    {score}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/30 bg-white/10 px-4 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/70">
-                    Misses
-                  </p>
-                  <p className="text-3xl font-semibold text-amber-300">
-                    {misses}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/30 bg-white/10 px-4 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/70">
-                    Pace
-                  </p>
-                  <p className="text-3xl font-semibold text-emerald-300">
-                    {Math.max(score - misses, 0)}
-                  </p>
-                </div>
+      {appState === APP_STATE.PLAYING && (
+        <div className="relative w-full h-full flex flex-col items-center justify-center bg-[#050505]">
+          {/* Background Grid */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px)`,
+              backgroundSize: "40px 40px"
+            }}
+          />
+
+          {/* HUD */}
+          <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+            <div className="flex flex-col gap-1">
+              <span className="text-cyan-500 font-mono text-xs tracking-widest uppercase">Score</span>
+              <span className="text-4xl font-black text-white drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">{score}</span>
+            </div>
+            <div className="flex flex-col gap-1 items-end">
+              <span className="text-amber-500 font-mono text-xs tracking-widest uppercase">Misses</span>
+              <div className="flex gap-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className={`w-3 h-3 rounded-full ${i < misses ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : "bg-slate-800"}`} />
+                ))}
               </div>
             </div>
-            <div className="absolute right-4 top-4 flex w-28 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 p-2 shadow-md shadow-slate-300/60 sm:right-6 sm:top-6 sm:w-36">
-              {frameSrc ? (
-                <img
-                  src={frameSrc}
-                  alt="Live webcam"
-                  className="h-20 w-full rounded-xl border border-slate-200 object-cover sm:h-24"
-                />
-              ) : (
-                <div className="flex h-28 w-full items-center justify-center rounded-xl border border-dashed border-slate-300 text-[10px] uppercase tracking-wide text-slate-400">
-                  {error ? "Camera Error" : "Webcam"}
-                </div>
-              )}
-            </div>
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-              <p className="font-semibold text-slate-800">Live Tracking</p>
-              <span className={trackingStatus.className}>
-                {trackingStatus.text}
-              </span>
-            </div>
           </div>
-          <div className="flex flex-col gap-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/80">
-              <p className="text-lg font-semibold text-slate-900">Playbook</p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-600">
-                <li>Frame yourself and raise your index finger.</li>
-                <li>Slide left/right to mirror the paddle track.</li>
-                <li>Chase streaks—drops reset the neon ball.</li>
-              </ul>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/80">
-              <p className="text-lg font-semibold text-slate-900">
-                Session Notes
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Improve accuracy by keeping the camera stable and ensuring even
-                lighting on your hand.
-              </p>
-            </div>
+
+          {/* Game Canvas */}
+          <div className="relative z-0 border-2 border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-cyan-500/10">
+            <canvas
+              ref={canvasRef}
+              width={WIDTH}
+              height={HEIGHT}
+              className="block bg-black/50 backdrop-blur-sm"
+            />
+          </div>
+
+          {/* Webcam Overlay */}
+          <div className="absolute top-6 right-6 w-32 h-24 border border-white/20 bg-black/50 rounded-lg overflow-hidden z-20">
+            <img
+              src={frameSrc || undefined}
+              alt="Cam"
+              className={`w-full h-full object-cover transition-opacity duration-200 ${frameSrc ? "opacity-80" : "opacity-0"}`}
+            />
+            {!frameSrc && (
+              <div className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-500 font-mono">
+                {error ? "CAMERA ERROR" : "CONNECTING..."}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent animate-scan" />
+          </div>
+
+          {/* Controls */}
+          <div className="absolute bottom-6 right-6 flex gap-4 pointer-events-auto z-20">
+            <button
+              onClick={handleReturnToIntro}
+              className="px-4 py-2 border border-white/20 text-[10px] font-mono tracking-[0.3em] uppercase bg-black/40 text-white hover:border-cyan-500 hover:text-cyan-500 transition-colors"
+            >
+              Abort Game
+            </button>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {appState === APP_STATE.GAME_OVER && (
+        <GameOverView
+          score={score}
+          misses={misses}
+          onRestart={startGame}
+          onHome={handleReturnToIntro}
+          onExit={onBack ? handleExitToArcade : undefined}
+        />
+      )}
+    </main>
   );
 };
 

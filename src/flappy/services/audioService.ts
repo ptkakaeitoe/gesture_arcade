@@ -173,6 +173,87 @@ export class AudioService {
     gain.connect(this.masterGain);
     noise.start();
   }
+  playPing() {
+    if (!this.ctx || !this.masterGain) return;
+    const t = this.ctx.currentTime;
+
+    // High pitched beep (Paddle Hit)
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.05);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.05);
+  }
+
+  playPong() {
+    if (!this.ctx || !this.masterGain) return;
+    const t = this.ctx.currentTime;
+
+    // Lower pitched beep (Wall Hit)
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.05);
+  }
+
+  playScore() {
+    if (!this.ctx || !this.masterGain) return;
+    const t = this.ctx.currentTime;
+
+    // Success chime
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t); // A5
+    osc.frequency.setValueAtTime(1108, t + 0.1); // C#6
+    osc.frequency.setValueAtTime(1318, t + 0.2); // E6
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.linearRampToValueAtTime(0.1, t + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.6);
+  }
+
+  playMiss() {
+    if (!this.ctx || !this.masterGain) return;
+    const t = this.ctx.currentTime;
+
+    // Negative buzz
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.linearRampToValueAtTime(100, t + 0.3);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(t + 0.3);
+  }
 }
 
 export const audioService = new AudioService();
