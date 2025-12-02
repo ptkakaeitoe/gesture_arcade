@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import "./styles/App.css";
 import Game from "./Pong/Game";
-import DinoSurferGame from "./dino-surfer-3d/DinoSurferGame";
+import DinoSurferGame from "./dino_game/DinoSurferGame";
 import GameDashboard from "./views/GameDashboard";
 import IntroView from "./views/IntroView";
 import type { CameraOption, PlayableGameId } from "./types";
-import CyberSliceGame from "./gesture-arcade_-cyberslice/CyberSliceGame";
+import CyberSliceGame from "./cyberslice/CyberSliceGame";
 import FlappyGame from "./flappy/FlappyGame";
 import MonkeyMemeGame from "./monkeyMeme/MonkeyMemeGame";
 import {
