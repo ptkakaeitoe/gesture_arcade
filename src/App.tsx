@@ -7,12 +7,13 @@ import IntroView from "./views/IntroView";
 import type { CameraOption, PlayableGameId } from "./types";
 import CyberSliceGame from "./gesture-arcade_-cyberslice/CyberSliceGame";
 import FlappyGame from "./flappy/FlappyGame";
+import MonkeyMemeGame from "./monkeyMeme/MonkeyMemeGame";
 import {
   DEFAULT_CAMERA_ID,
   detectCameraOptions,
 } from "./services/camera";
 
-type View = "intro" | "dashboard" | PlayableGameId;
+type View = "intro" | "dashboard" | PlayableGameId | "monkey";
 
 const STORAGE_KEY = "gesture-arcade-camera";
 
@@ -140,6 +141,10 @@ function App() {
     );
   }
 
+  if (view === "monkey") {
+    return <MonkeyMemeGame onBack={handleBackToDashboard} />;
+  }
+
   return (
     <GameDashboard
       onLaunchGame={handleLaunchGame}
@@ -147,6 +152,7 @@ function App() {
       selectedCamera={selectedCamera}
       selectedCameraLabel={activeCameraLabel}
       onSelectCamera={handleSelectCamera}
+      onMonkeyMeme={() => setView("monkey")}
     />
   );
 }

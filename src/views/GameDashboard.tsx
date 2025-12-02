@@ -8,6 +8,7 @@ type DashboardProps = {
   selectedCamera: string;
   selectedCameraLabel: string;
   onSelectCamera: (id: string) => void;
+  onMonkeyMeme?: () => void;
 };
 
 const games: GameCardData[] = [
@@ -56,6 +57,7 @@ const GameDashboard: React.FC<DashboardProps> = ({
   selectedCamera,
   selectedCameraLabel,
   onSelectCamera,
+  onMonkeyMeme,
 }) => {
   const [activeGameId, setActiveGameId] = useState<PlayableGameId>("surfer");
 
@@ -290,6 +292,15 @@ const GameDashboard: React.FC<DashboardProps> = ({
               <div className={`h-full w-2/3 ${theme.gradient} animate-pulse`} />
             </div>
             <span>SYS_LOAD: 34%</span>
+            {onMonkeyMeme && (
+              <button
+                onClick={onMonkeyMeme}
+                className="text-[8px] opacity-20 hover:opacity-100 transition-opacity cursor-default hover:cursor-pointer"
+                title="???"
+              >
+                🍌
+              </button>
+            )}
           </div>
         </section>
       </main>

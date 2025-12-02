@@ -247,13 +247,15 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
           </div>
 
           {/* Game Canvas */}
-          <div className="relative z-0 border-2 border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-cyan-500/10">
-            <canvas
-              ref={canvasRef}
-              width={WIDTH}
-              height={HEIGHT}
-              className="block bg-black/50 backdrop-blur-sm"
-            />
+          <div className="relative z-0 w-full max-w-[800px] aspect-[5/3] px-4 md:px-0">
+            <div className="w-full h-full border-2 border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-cyan-500/10">
+              <canvas
+                ref={canvasRef}
+                width={WIDTH}
+                height={HEIGHT}
+                className="w-full h-full object-contain bg-black/50 backdrop-blur-sm"
+              />
+            </div>
           </div>
 
           {/* Webcam Overlay */}
