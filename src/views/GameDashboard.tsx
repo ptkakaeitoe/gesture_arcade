@@ -285,25 +285,25 @@ const GameDashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Decorative HUD Elements */}
-          <div className="absolute right-12 bottom-12 flex flex-col items-end gap-2 text-[10px] font-mono text-slate-600">
-            <div className="w-32 h-1 bg-slate-800 rounded-full overflow-hidden">
-              <div className={`h-full w-2/3 ${theme.gradient} animate-pulse`} />
-            </div>
-            <span>SYS_LOAD: 34%</span>
-            {onMonkeyMeme && (
-              <button
-                onClick={onMonkeyMeme}
-                className="text-[8px] opacity-20 hover:opacity-100 transition-opacity cursor-default hover:cursor-pointer"
-                title="???"
-              >
-                🍌
-              </button>
-            )}
-          </div>
         </section>
       </main>
+
+      {/* Decorative HUD Elements - Fixed to top right for better mobile visibility */}
+      <div className="fixed right-4 top-24 md:right-12 md:bottom-12 md:top-auto flex flex-col items-end gap-2 text-[10px] font-mono text-slate-600 z-[100] pointer-events-none">
+        <div className="w-32 h-1 bg-slate-800 rounded-full overflow-hidden">
+          <div className={`h-full w-2/3 ${theme.gradient} animate-pulse`} />
+        </div>
+        <span>SYS_LOAD: 34%</span>
+        {onMonkeyMeme && (
+          <button
+            onClick={onMonkeyMeme}
+            className="text-4xl md:text-5xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer pointer-events-auto animate-bounce drop-shadow-lg"
+            title="???"
+          >
+            🍌
+          </button>
+        )}
+      </div>
     </div>
   );
 };
