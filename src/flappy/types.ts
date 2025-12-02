@@ -22,6 +22,14 @@ export const GAME_MODE = {
 
 export type GameMode = (typeof GAME_MODE)[keyof typeof GAME_MODE];
 
+export const GAME_VARIANT = {
+  RUNNER_ONLY: "RUNNER_ONLY",
+  FLAPPY_ONLY: "FLAPPY_ONLY",
+  HYBRID: "HYBRID",
+} as const;
+
+export type GameVariant = (typeof GAME_VARIANT)[keyof typeof GAME_VARIANT];
+
 export interface Player {
   y: number;
   vy: number;

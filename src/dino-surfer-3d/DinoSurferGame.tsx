@@ -22,8 +22,89 @@ const IconMute = () => (
 
 const LANE_LEFT_THRESHOLD = 0.33;
 const LANE_RIGHT_THRESHOLD = 0.66;
-const JUMP_TRIGGER_THRESHOLD = 0.55;
-const JUMP_RESET_THRESHOLD = 0.70;
+const JUMP_TRIGGER_THRESHOLD = 0.60; // Easier to trigger (was 0.55)
+const JUMP_RESET_THRESHOLD = 0.65; // Easier to reset (was 0.70)
+
+const GameOverOverlay: React.FC<{
+  score: number;
+  highScore: number;
+  onRestart: () => void;
+  onMenu: () => void;
+}> = ({ score, highScore, onRestart, onMenu }) => {
+  const [countdown, setCountdown] = useState(3);
+
+  useEffect(() => {
+    if (countdown === 0) {
+      onRestart();
+    }
+  }, [countdown, onRestart]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-lg p-6">
+      <div className="max-w-2xl w-full text-center space-y-12 animate-in fade-in zoom-in duration-500">
+        <div className="space-y-4">
+          <div className="inline-block px-4 py-1 border border-red-500/30 bg-red-500/10 text-red-500 text-[10px] font-mono uppercase tracking-widest rounded-sm">
+            System Failure
+          </div>
+          <h2 className="text-4xl md:text-9xl font-black text-white tracking-tighter uppercase drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+            CRASHED
+          </h2>
+        </div>
+
+        <div className="flex justify-center gap-8">
+          <div className="flex flex-col items-center p-6 bg-white/5 border border-white/10 w-48 skew-x-[-6deg]">
+            <span className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-2">Final Score</span>
+            <span className="text-5xl font-black text-brand-orange">{Math.floor(score)}</span>
+          </div>
+          <div className="flex flex-col items-center p-6 bg-white/5 border border-white/10 w-48 skew-x-[-6deg]">
+            <span className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-2 flex items-center gap-2">
+              <IconTrophy /> Best
+            </span>
+            <span className="text-5xl font-black text-white">{highScore}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+          <button
+            onClick={onRestart}
+            className={`group relative w-full py-5 bg-transparent overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95`}
+          >
+            <div className={`absolute inset-0 bg-white/10 skew-x-[-12deg] border border-white/20 transition-all duration-300 group-hover:bg-brand-orange group-hover:border-brand-orange`} />
+            <div
+              className="absolute bottom-0 left-0 h-1 bg-brand-orange transition-all duration-1000 ease-linear z-20"
+              style={{ width: `${(countdown / 3) * 100}%` }}
+            />
+            <span className="relative z-10 font-black text-xl tracking-[0.2em] group-hover:text-black transition-colors duration-300 flex items-center justify-center gap-4 uppercase">
+              <IconRefresh />
+              REBOOT SYSTEM ({countdown})
+            </span>
+          </button>
+
+          <button
+            onClick={onMenu}
+            className="text-xs font-mono text-slate-500 hover:text-white transition-colors py-4 uppercase tracking-widest"
+          >
+            [ Return to Main Menu ]
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 type DinoSurferGameProps = {
   onBack?: () => void;
@@ -114,22 +195,25 @@ const DinoSurferGame: React.FC<DinoSurferGameProps> = ({ onBack, cameraId, camer
     setCameraReady(false);
   }, [error]);
 
-  const handleGameOver = (finalScore: number) => {
+  const handleGameOver = React.useCallback((finalScore: number) => {
     setGameState(GameState.GAME_OVER);
-    if (finalScore > highScore) {
-      setHighScore(finalScore);
-      localStorage.setItem('dino-surfer-highscore', finalScore.toString());
-    }
-  };
+    setHighScore((prev) => {
+      if (finalScore > prev) {
+        localStorage.setItem('dino-surfer-highscore', finalScore.toString());
+        return finalScore;
+      }
+      return prev;
+    });
+  }, []);
 
-  const startGameNow = (difficulty: GameDifficulty) => {
+  const startGameNow = React.useCallback((difficulty: GameDifficulty) => {
     audioManager.init(); // Unlock AudioContext on user gesture
     setGameDifficulty(difficulty);
     setScore(0);
     setGameState(GameState.PLAYING);
     setPendingDifficulty(null);
     setWaitingForCamera(false);
-  };
+  }, []);
 
   const queueStartGame = (difficulty: GameDifficulty) => {
     if (cameraReady) {
@@ -370,51 +454,12 @@ const DinoSurferGame: React.FC<DinoSurferGameProps> = ({ onBack, cameraId, camer
 
       {/* Game Over Overlay */}
       {gameState === GameState.GAME_OVER && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-lg p-6">
-          <div className="max-w-2xl w-full text-center space-y-12 animate-in fade-in zoom-in duration-500">
-            <div className="space-y-4">
-              <div className="inline-block px-4 py-1 border border-red-500/30 bg-red-500/10 text-red-500 text-[10px] font-mono uppercase tracking-widest rounded-sm">
-                System Failure
-              </div>
-              <h2 className="text-4xl md:text-9xl font-black text-white tracking-tighter uppercase drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-                CRASHED
-              </h2>
-            </div>
-
-            <div className="flex justify-center gap-8">
-              <div className="flex flex-col items-center p-6 bg-white/5 border border-white/10 w-48 skew-x-[-6deg]">
-                <span className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-2">Final Score</span>
-                <span className={`text-5xl font-black ${theme.text}`}>{Math.floor(score)}</span>
-              </div>
-              <div className="flex flex-col items-center p-6 bg-white/5 border border-white/10 w-48 skew-x-[-6deg]">
-                <span className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-2 flex items-center gap-2">
-                  <IconTrophy /> Best
-                </span>
-                <span className="text-5xl font-black text-white">{highScore}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
-              <button
-                onClick={() => queueStartGame(gameDifficulty)}
-                className={`group relative w-full py-5 bg-transparent overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95`}
-              >
-                <div className={`absolute inset-0 bg-white/10 skew-x-[-12deg] border border-white/20 transition-all duration-300 group-hover:bg-brand-orange group-hover:border-brand-orange`} />
-                <span className="relative z-10 font-black text-xl tracking-[0.2em] group-hover:text-black transition-colors duration-300 flex items-center justify-center gap-4 uppercase">
-                  <IconRefresh />
-                  REBOOT SYSTEM
-                </span>
-              </button>
-
-              <button
-                onClick={() => setGameState(GameState.MENU)}
-                className="text-xs font-mono text-slate-500 hover:text-white transition-colors py-4 uppercase tracking-widest"
-              >
-                [ Return to Main Menu ]
-              </button>
-            </div>
-          </div>
-        </div>
+        <GameOverOverlay
+          score={score}
+          highScore={highScore}
+          onRestart={() => queueStartGame(gameDifficulty)}
+          onMenu={() => setGameState(GameState.MENU)}
+        />
       )}
 
       {/* Gesture + Camera Overlay (Tech Frame Style) */}

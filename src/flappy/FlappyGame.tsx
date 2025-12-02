@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import IntroView from "./components/IntroView";
 import CyberRunner from "./components/CyberRunner";
 import GameOverView from "./components/GameOverView";
-import type { GameStats } from "./types";
+import type { GameStats, GameVariant } from "./types";
+import { GAME_VARIANT } from "./types";
 import { audioService } from "./services/audioService";
 
 const APP_STATE = {
@@ -50,6 +51,7 @@ const FlappyGame: React.FC<FlappyGameProps> = ({
   const [startPending, setStartPending] = useState(false);
   const [gameplayActive, setGameplayActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  const [gameVariant, setGameVariant] = useState<GameVariant>(GAME_VARIANT.HYBRID);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -99,7 +101,8 @@ const FlappyGame: React.FC<FlappyGameProps> = ({
     }
   }, [startPending, cameraReady, gameplayActive]);
 
-  const requestStart = () => {
+  const requestStart = (variant: GameVariant) => {
+    setGameVariant(variant);
     setStartPending(true);
     setGameplayActive(false);
     setCameraError(false);
@@ -231,6 +234,7 @@ const FlappyGame: React.FC<FlappyGameProps> = ({
             onCameraReady={handleCameraReady}
             onCameraLost={handleCameraLost}
             isRunning={runEnabled}
+            gameVariant={gameVariant}
           />
           {waitingForCameraOverlay && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm text-center text-xs font-mono tracking-[0.3em] text-white uppercase pointer-events-none">
@@ -250,7 +254,7 @@ const FlappyGame: React.FC<FlappyGameProps> = ({
           score={lastGameStats.score}
           highScore={lastGameStats.highScore}
           maxCombo={lastGameStats.maxCombo}
-          onRestart={requestStart}
+          onRestart={() => requestStart(gameVariant)}
           onHome={handleReturnToIntro}
           onExit={onBack ? handleExitToArcade : undefined}
         />

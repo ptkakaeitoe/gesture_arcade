@@ -42,6 +42,7 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
   // --- game state ---
   const score = useRef(0);
   const isGameOver = useRef(false);
+  const restartTimer = useRef(180); // 3 seconds * 60 fps
 
   useEffect(() => {
     if (typeof y === "number") {
@@ -77,6 +78,7 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
       obstacleTimer.current = 0;
       score.current = 0;
       isGameOver.current = false;
+      restartTimer.current = 180; // Reset timer
       setScoreDisplay(0);
       setStatusDisplay("Running");
     };
@@ -155,6 +157,12 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
 
         // Score
         score.current += 1;
+      } else {
+        // Auto-restart logic
+        restartTimer.current -= 1;
+        if (restartTimer.current <= 0) {
+          resetGame();
+        }
       }
 
       // draw
@@ -207,9 +215,14 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
 
         ctx.font = "20px sans-serif";
         ctx.fillText(
-          "Raise your hand and press R to restart",
+          `Restarting in ${Math.ceil(restartTimer.current / 60)}...`,
           WIDTH / 2,
           HEIGHT / 2 + 20
+        );
+        ctx.fillText(
+          "Raise your hand and press R to restart now",
+          WIDTH / 2,
+          HEIGHT / 2 + 50
         );
         ctx.textAlign = "start";
       }

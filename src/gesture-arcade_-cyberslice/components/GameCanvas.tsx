@@ -3,7 +3,7 @@ import type { Entity, Point, DifficultyConfig, NormalizedPoint } from "../types"
 import { ENTITY_TYPE } from "../types";
 import { audioService } from "../services/audioService";
 
-const BLADE_LIFETIME = 15; 
+const BLADE_LIFETIME = 15;
 
 interface GameCanvasProps {
   onGameOver: (score: number, maxCombo: number) => void;
@@ -28,7 +28,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   const scoreRef = useRef(0);
   const comboRef = useRef(0);
   const maxComboRef = useRef(0);
-  
+
   // Game State Refs
   const entities = useRef<Entity[]>([]);
   const particles = useRef<Entity[]>([]);
@@ -49,26 +49,26 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Helper to spawn entities
   const spawnEntity = (width: number, height: number) => {
-    const isBomb = Math.random() < bombChance; 
+    const isBomb = Math.random() < bombChance;
     const x = Math.random() * (width - 100) + 50;
     const y = height + 50;
-    
+
     // Physics Logic for Slower Gameplay
     // We want the fruit to reach a peak height somewhere between 50% and 80% of screen height
     // Using v^2 = u^2 + 2as (at peak v=0), u = sqrt(-2as)
     // s (displacement) is roughly -(height * 0.5 to 0.8)
     const targetHeight = height * (0.5 + Math.random() * 0.3);
-    const displacement = targetHeight; 
-    
+    const displacement = targetHeight;
+
     // Initial vertical velocity needed to reach that height with current gravity
     const vy = -Math.sqrt(2 * gravity * displacement);
-    
+
     // Time to reach peak = -vy / gravity
     const timeToPeak = -vy / gravity;
-    
+
     // We want it to land somewhere near the center horizontally
     const targetX = width / 2 + (Math.random() - 0.5) * (width * 0.6);
-    
+
     // Horizontal velocity: distance / time
     const vx = (targetX - x) / timeToPeak;
 
@@ -79,7 +79,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       y,
       vx,
       vy,
-      radius: 35, 
+      radius: 55,
       rotation: 0,
       rotationSpeed: (Math.random() - 0.5) * 0.15, // Slower rotation
       color: isBomb ? '#ff0000' : '#ffffff',
@@ -116,24 +116,24 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   };
 
   const spawnTextFloat = (x: number, y: number, text: string) => {
-     particles.current.push({
-        id: Math.random().toString(),
-        type: ENTITY_TYPE.TEXT_FLOAT,
-        x,
-        y,
-        vx: 0,
-        vy: -1.5, // Slower float up
-        radius: 0,
-        rotation: 0,
-        rotationSpeed: 0,
-        color: '#10b981', 
-        emoji: text,
-        sliced: false,
-        markedForDeletion: false,
-        scale: 1,
-        opacity: 1,
-        life: 40
-      });
+    particles.current.push({
+      id: Math.random().toString(),
+      type: ENTITY_TYPE.TEXT_FLOAT,
+      x,
+      y,
+      vx: 0,
+      vy: -1.5, // Slower float up
+      radius: 0,
+      rotation: 0,
+      rotationSpeed: 0,
+      color: '#10b981',
+      emoji: text,
+      sliced: false,
+      markedForDeletion: false,
+      scale: 1,
+      opacity: 1,
+      life: 40
+    });
   };
 
   // Main Loop
@@ -150,22 +150,22 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Clear Screen
     ctx.clearRect(0, 0, width, height);
-    
+
     // Draw Blade Trail
     if (bladePath.current.length > 1) {
       ctx.beginPath();
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
-      
+
       // Neon Glow
       ctx.shadowBlur = 15;
       ctx.shadowColor = "#10b981";
       ctx.strokeStyle = "#10b981";
-      ctx.lineWidth = 6;
-      
+      ctx.lineWidth = 12;
+
       for (let i = 0; i < bladePath.current.length - 1; i++) {
         const p1 = bladePath.current[i];
-        const p2 = bladePath.current[i+1];
+        const p2 = bladePath.current[i + 1];
         ctx.globalAlpha = (p1.life || 0) / BLADE_LIFETIME;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
@@ -198,7 +198,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         ent.markedForDeletion = true;
         // Reset combo if fruit dropped
         if (ent.type === ENTITY_TYPE.FRUIT && !ent.sliced) {
-            comboRef.current = 0;
+          comboRef.current = 0;
         }
       }
 
@@ -206,14 +206,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.save();
       ctx.translate(ent.x, ent.y);
       ctx.rotate(ent.rotation);
-      ctx.font = "60px Inter";
+      ctx.font = "90px Inter";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      
+
       // Shadow for visual pop
       ctx.shadowBlur = 20;
       ctx.shadowColor = ent.color;
-      
+
       ctx.fillText(ent.emoji, 0, 0);
       ctx.restore();
 
@@ -221,7 +221,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       if (!ent.sliced && bladePath.current.length > 1) {
         const lastPoint = bladePath.current[bladePath.current.length - 1];
         const prevPoint = bladePath.current[bladePath.current.length - 2];
-        
+
         const dx = ent.x - lastPoint.x;
         const dy = ent.y - lastPoint.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -239,18 +239,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
             gameActive.current = false;
             spawnParticles(ent.x, ent.y, '#ff0000', 50);
             setTimeout(() => {
-                onGameOver(scoreRef.current, maxComboRef.current);
+              onGameOver(scoreRef.current, maxComboRef.current);
             }, 500);
           } else {
             // SLICE
             audioService.playSlice();
             comboRef.current += 1;
             if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
-            
+
             const points = 10 + comboRef.current;
             scoreRef.current += points;
             updateScore(scoreRef.current);
-            
+
             spawnParticles(ent.x, ent.y, '#ffff00', 10);
             spawnTextFloat(ent.x, ent.y, `+${points}`);
           }
@@ -260,33 +260,33 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Process Particles & Floats
     particles.current.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life = (p.life || 0) - 1;
-        
-        if (p.type === ENTITY_TYPE.PARTICLE) {
-        p.vy += gravity * 0.5;
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = Math.max(0, (p.life || 0) / 30);
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (p.type === ENTITY_TYPE.TEXT_FLOAT) {
-            ctx.font = "20px JetBrains Mono";
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = Math.max(0, (p.life || 0) / 40);
-            ctx.fillText(p.emoji, p.x, p.y);
-        }
-        
-        ctx.globalAlpha = 1;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life = (p.life || 0) - 1;
 
-        if ((p.life || 0) <= 0) p.markedForDeletion = true;
+      if (p.type === ENTITY_TYPE.PARTICLE) {
+        p.vy += gravity * 0.5;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, (p.life || 0) / 30);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === ENTITY_TYPE.TEXT_FLOAT) {
+        ctx.font = "20px JetBrains Mono";
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, (p.life || 0) / 40);
+        ctx.fillText(p.emoji, p.x, p.y);
+      }
+
+      ctx.globalAlpha = 1;
+
+      if ((p.life || 0) <= 0) p.markedForDeletion = true;
     });
 
     // Cleanup
     entities.current = entities.current.filter(e => !e.markedForDeletion);
     particles.current = particles.current.filter(e => !e.markedForDeletion);
-    
+
     // Blade Decay
     bladePath.current.forEach(p => p.life = (p.life || 0) - 1);
     bladePath.current = bladePath.current.filter(p => (p.life || 0) > 0);
@@ -295,9 +295,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     frameCount.current++;
     // Spawn rate logic adjusted for slower gravity to keep screen populated but not overwhelmed
     const currentSpawnRate = Math.max(20, spawnRateBase - Math.floor(scoreRef.current / 50));
-    
+
     if (frameCount.current % currentSpawnRate === 0) {
-        spawnEntity(width, height);
+      spawnEntity(width, height);
     }
 
     requestRef.current = requestAnimationFrame(loop);
@@ -307,12 +307,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   const handleInputStart = (x: number, y: number) => {
     isMouseDown.current = true;
     mousePos.current = { x, y };
-    bladePath.current = []; 
+    bladePath.current = [];
   };
 
   const handleInputMove = (x: number, y: number) => {
     if (!isMouseDown.current) return;
-    
+
     const canvasX = x;
     const canvasY = y;
 
@@ -328,10 +328,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   // Event Listeners
   useEffect(() => {
     const handleResize = () => {
-        if (canvasRef.current) {
-            canvasRef.current.width = window.innerWidth;
-            canvasRef.current.height = window.innerHeight;
-        }
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth;
+        canvasRef.current.height = window.innerHeight;
+      }
     };
     window.addEventListener('resize', handleResize);
     handleResize();
@@ -340,18 +340,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     if (!canvas) return;
 
     const onTouchStart = (e: TouchEvent) => {
-        e.preventDefault();
-        handleInputStart(e.touches[0].clientX, e.touches[0].clientY);
+      e.preventDefault();
+      handleInputStart(e.touches[0].clientX, e.touches[0].clientY);
     };
     const onTouchMove = (e: TouchEvent) => {
-        e.preventDefault();
-        handleInputMove(e.touches[0].clientX, e.touches[0].clientY);
+      e.preventDefault();
+      handleInputMove(e.touches[0].clientX, e.touches[0].clientY);
     };
     const onMouseDown = (e: MouseEvent) => {
-        handleInputStart(e.clientX, e.clientY);
+      handleInputStart(e.clientX, e.clientY);
     };
     const onMouseMove = (e: MouseEvent) => {
-        handleInputMove(e.clientX, e.clientY);
+      handleInputMove(e.clientX, e.clientY);
     };
     const onMouseUp = () => handleInputEnd();
 
@@ -366,14 +366,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     requestRef.current = requestAnimationFrame(loop);
 
     return () => {
-        window.removeEventListener('resize', handleResize);
-        canvas.removeEventListener('touchstart', onTouchStart);
-        canvas.removeEventListener('touchmove', onTouchMove);
-        canvas.removeEventListener('touchend', onMouseUp);
-        canvas.removeEventListener('mousedown', onMouseDown);
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onMouseUp);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
   }, [loop]);
 

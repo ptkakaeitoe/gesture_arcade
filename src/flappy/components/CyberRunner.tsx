@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { useHandTracking } from "../../hooks/useHandTracking";
-import type { GameMode, Player, Obstacle } from "../types";
-import { GAME_MODE } from "../types";
+import type { GameMode, Player, Obstacle, GameVariant } from "../types";
+import { GAME_MODE, GAME_VARIANT } from "../types";
 import { audioService } from "../services/audioService";
 
 interface CyberRunnerProps {
@@ -14,6 +14,7 @@ interface CyberRunnerProps {
   onCameraReady?: () => void;
   onCameraLost?: () => void;
   isRunning?: boolean;
+  gameVariant?: GameVariant;
 }
 
 const CyberRunner: React.FC<CyberRunnerProps> = ({
@@ -26,6 +27,7 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
   onCameraReady,
   onCameraLost,
   isRunning = false,
+  gameVariant = GAME_VARIANT.HYBRID,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reportedFrameRef = useRef(false);
@@ -55,16 +57,22 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
   const requestRef = useRef<number | null>(null);
   const gameActive = useRef(true);
   const score = useRef(0);
-  const mode = useRef<GameMode>(GAME_MODE.RUNNER);
+
+  // Initialize mode based on variant
+  const initialMode = gameVariant === GAME_VARIANT.FLAPPY_ONLY
+    ? GAME_MODE.FLAPPY
+    : GAME_MODE.RUNNER;
+
+  const mode = useRef<GameMode>(initialMode);
   const frameCount = useRef(0);
 
   // Physics Constants
-  const GRAVITY_RUNNER = 1;
-  const GRAVITY_FLAPPY = 0.4;
-  const JUMP_STRENGTH_RUNNER = -28;
-  const JUMP_STRENGTH_FLAPPY = -11;
+  const GRAVITY_RUNNER = 1.2; // Reduced from 1.6 for less heavy feel
+  const GRAVITY_FLAPPY = 0.25; // Reduced from 0.4 for floatier feel
+  const JUMP_STRENGTH_RUNNER = -22; // Adjusted from -24
+  const JUMP_STRENGTH_FLAPPY = -8; // Adjusted from -11 for gentler flaps
   const GROUND_HEIGHT = 60;
-  const SPEED_BASE = 6;
+  const SPEED_BASE = 7; // Slightly faster base speed (was 6)
   const INPUT_SMOOTHING_WEIGHT = 0.6;
   const RUNNER_TRIGGER_THRESHOLD = 0.45;
   const FLAPPY_TRIGGER_THRESHOLD = 0.55;
@@ -124,7 +132,7 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
       });
     } else if (mode.current === GAME_MODE.FLAPPY) {
       // Pipes
-      const gap = 140;
+      const gap = 400; // Increased from 140 for easier gameplay
       const minPipe = 50;
       const availableHeight = height - GROUND_HEIGHT;
       const topH =
@@ -153,6 +161,10 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
   };
 
   const switchMode = (newMode: GameMode) => {
+    // If locked to a variant, ignore mode switches unless it's just resetting
+    if (gameVariant === GAME_VARIANT.RUNNER_ONLY && newMode !== GAME_MODE.RUNNER) return;
+    if (gameVariant === GAME_VARIANT.FLAPPY_ONLY && newMode !== GAME_MODE.FLAPPY) return;
+
     audioService.playPhaseSwitch();
     mode.current = newMode;
     phaseTimer.current = 0;
@@ -281,7 +293,7 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
       // Ceiling/Floor
       if (player.current.y < 0) {
         player.current.y = 0;
-        player.current.vy = 0;
+        player.current.vy = 2; // Force downward momentum on ceiling hit
       }
       const floor = height - GROUND_HEIGHT - player.current.height;
       if (player.current.y > floor) {
@@ -307,23 +319,25 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
     phaseTimer.current++;
 
     // Phase Switching Logic
-    if (
-      phaseTimer.current > PHASE_DURATION &&
-      mode.current !== GAME_MODE.TRANSMIT
-    ) {
-      switchMode(GAME_MODE.TRANSMIT);
-    } else if (
-      mode.current === GAME_MODE.TRANSMIT &&
-      phaseTimer.current > PHASE_DURATION + 300
-    ) {
-      // Switch to next mode
-      // Cycle: Runner -> Transmit -> Flappy -> Transmit -> Runner
-      // We need to know previous mode, or just toggle.
-      // Simple toggle based on randomness or framecount, but let's toggle.
-      // Actually, let's look at previous state logic?
-      // Let's just randomize for fun or alternate.
-      const next = Math.random() > 0.5 ? GAME_MODE.RUNNER : GAME_MODE.FLAPPY;
-      switchMode(next);
+    if (gameVariant === GAME_VARIANT.HYBRID) {
+      if (
+        phaseTimer.current > PHASE_DURATION &&
+        mode.current !== GAME_MODE.TRANSMIT
+      ) {
+        switchMode(GAME_MODE.TRANSMIT);
+      } else if (
+        mode.current === GAME_MODE.TRANSMIT &&
+        phaseTimer.current > PHASE_DURATION + 300
+      ) {
+        // Switch to next mode
+        // Cycle: Runner -> Transmit -> Flappy -> Transmit -> Runner
+        // We need to know previous mode, or just toggle.
+        // Simple toggle based on randomness or framecount, but let's toggle.
+        // Actually, let's look at previous state logic?
+        // Let's just randomize for fun or alternate.
+        const next = Math.random() > 0.5 ? GAME_MODE.RUNNER : GAME_MODE.FLAPPY;
+        switchMode(next);
+      }
     }
 
     // Spawn Obstacles
@@ -493,7 +507,7 @@ const CyberRunner: React.FC<CyberRunnerProps> = ({
       {/* Webcam Preview Overlay */}
       <div className="absolute top-4 right-4 w-24 h-16 md:w-32 md:h-24 border border-white/20 bg-black/50 rounded-lg overflow-hidden">
         <img
-          src={frame ?? ""}
+          src={frame || undefined}
           alt="Cam"
           className={`w-full h-full object-cover transition-opacity duration-200 ${hasFrame ? "opacity-80" : "opacity-0"
             }`}

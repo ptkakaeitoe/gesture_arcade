@@ -1,8 +1,10 @@
 
 import React from "react";
 
+import type { GameVariant } from "../types";
+
 type IntroViewProps = {
-  onEnter: () => void;
+  onEnter: (variant: GameVariant) => void;
   onBack?: () => void;
   cameraLabel?: string;
 };
@@ -67,38 +69,35 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter, onBack, cameraLabel }) =
         </div>
 
         {/* Start Button */}
-        <div className="mt-8">
-          <button
-            onClick={onEnter}
-            className="group relative px-12 py-6 bg-transparent overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
-          >
-            {/* Button Background Shape */}
-            <div className="absolute inset-0 bg-white/10 skew-x-[-12deg] border border-white/20 transition-all duration-300 group-hover:bg-brand-green group-hover:border-brand-green" />
+        {/* Mode Selection */}
+        <div className="mt-8 flex flex-col md:flex-row gap-6 w-full justify-center items-center">
+          {[
+            { id: "RUNNER_ONLY", label: "RUNNER ONLY", icon: "🏃" },
+            { id: "FLAPPY_ONLY", label: "BIRD ONLY", icon: "🦅" },
+            { id: "HYBRID", label: "HYBRID MODE", icon: "⚡" },
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => onEnter(mode.id as any)}
+              className="group relative w-full md:w-64 h-24 bg-transparent overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              {/* Button Background Shape */}
+              <div className="absolute inset-0 bg-white/5 skew-x-[-12deg] border border-white/10 transition-all duration-300 group-hover:bg-brand-green group-hover:border-brand-green" />
 
-            {/* Glitch Effect Layers */}
-            <div className="absolute inset-0 bg-brand-green/20 skew-x-[-12deg] translate-x-2 translate-y-2 opacity-0 group-hover:opacity-100 transition-all duration-100" />
+              {/* Glitch Effect Layers */}
+              <div className="absolute inset-0 bg-brand-green/20 skew-x-[-12deg] translate-x-2 translate-y-2 opacity-0 group-hover:opacity-100 transition-all duration-100" />
 
-            <span className="relative z-10 font-black text-xl tracking-[0.2em] group-hover:text-black transition-colors duration-300 flex items-center gap-4">
-              START RUN
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                />
-              </svg>
-            </span>
-          </button>
-          <p className="mt-6 text-center text-[10px] text-slate-600 font-mono tracking-widest animate-pulse">
-            CLICK TO START // KEYBOARD SUPPORTED
-          </p>
+              <div className="relative z-10 flex flex-col items-center justify-center h-full gap-1">
+                <span className="font-black text-xl tracking-[0.1em] text-white group-hover:text-black transition-colors duration-300 flex items-center gap-2">
+                  <span className="text-2xl">{mode.icon}</span> {mode.label}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
+        <p className="mt-6 text-center text-[10px] text-slate-600 font-mono tracking-widest animate-pulse">
+          SELECT PROTOCOL // KEYBOARD SUPPORTED
+        </p>
       </div>
 
       {/* Footer System Info */}

@@ -22,6 +22,7 @@ const GameOverView: React.FC<GameOverViewProps> = ({
 }) => {
   const [debrief, setDebrief] = useState<string>("ESTABLISHING UPLINK...");
   const [loading, setLoading] = useState(true);
+  const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +37,26 @@ const GameOverView: React.FC<GameOverViewProps> = ({
     return () => { mounted = false; };
   }, [score, maxCombo]);
 
+  useEffect(() => {
+    if (countdown === 0) {
+      onRestart();
+    }
+  }, [countdown, onRestart]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="relative h-screen w-full flex flex-col items-center justify-center bg-[#050505] text-white overflow-hidden">
       {/* Background Overlay */}
@@ -49,12 +70,12 @@ const GameOverView: React.FC<GameOverViewProps> = ({
       />
 
       <div className="relative z-20 max-w-2xl w-full px-6 text-center space-y-8">
-        
+
         <div className="space-y-2">
-            <h2 className="text-red-500 font-mono tracking-[0.5em] text-sm animate-pulse">CONNECTION TERMINATED</h2>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+          <h2 className="text-red-500 font-mono tracking-[0.5em] text-sm animate-pulse">CONNECTION TERMINATED</h2>
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]">
             GAME OVER
-            </h1>
+          </h1>
         </div>
 
         {/* Stats Grid */}
@@ -90,28 +111,32 @@ const GameOverView: React.FC<GameOverViewProps> = ({
 
         {/* AI Debrief */}
         <div className="min-h-[100px] bg-black/80 border-l-2 border-brand-green p-6 text-left relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-2 opacity-50">
-                <svg className="w-4 h-4 text-brand-green animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
-            <h3 className="text-brand-green font-mono text-xs mb-2 flex items-center gap-2">
-                <span>AI COMMANDER DEBRIEF</span>
-                {loading && <span className="animate-blink">_</span>}
-            </h3>
-            <p className="text-slate-300 font-mono text-sm leading-relaxed typing-effect">
-                {debrief}
-            </p>
+          <div className="absolute top-0 right-0 p-2 opacity-50">
+            <svg className="w-4 h-4 text-brand-green animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+          <h3 className="text-brand-green font-mono text-xs mb-2 flex items-center gap-2">
+            <span>AI COMMANDER DEBRIEF</span>
+            {loading && <span className="animate-blink">_</span>}
+          </h3>
+          <p className="text-slate-300 font-mono text-sm leading-relaxed typing-effect">
+            {debrief}
+          </p>
         </div>
 
         {/* Actions */}
         <div className="flex flex-col md:flex-row gap-4 justify-center pt-8">
           <button
             onClick={onRestart}
-            className="px-8 py-4 bg-white text-black font-bold font-mono tracking-widest hover:bg-brand-green transition-colors skew-x-[-12deg]"
+            className="px-8 py-4 bg-white text-black font-bold font-mono tracking-widest hover:bg-brand-green transition-colors skew-x-[-12deg] relative overflow-hidden"
           >
-            REBOOT SYSTEM
+            <span className="relative z-10">REBOOT SYSTEM ({countdown})</span>
+            <div
+              className="absolute bottom-0 left-0 h-1 bg-brand-green transition-all duration-1000 ease-linear"
+              style={{ width: `${(countdown / 3) * 100}%` }}
+            />
           </button>
           <button
             onClick={onMenu}
