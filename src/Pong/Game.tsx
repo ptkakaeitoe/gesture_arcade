@@ -236,6 +236,12 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
               <span className="text-cyan-500 font-mono text-xs tracking-widest uppercase">Score</span>
               <span className="text-4xl font-black text-white drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">{score}</span>
             </div>
+            <div className="flex flex-col gap-1 items-center text-center">
+              <span className="text-slate-500 font-mono text-xs tracking-widest uppercase">Tracking</span>
+              <span className={`text-sm font-mono ${trackingStatus.className}`}>
+                {trackingStatus.text}
+              </span>
+            </div>
             <div className="flex flex-col gap-1 items-end">
               <span className="text-amber-500 font-mono text-xs tracking-widest uppercase">Misses</span>
               <div className="flex gap-2">
