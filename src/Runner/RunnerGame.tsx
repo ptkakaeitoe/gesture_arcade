@@ -112,8 +112,12 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
     };
 
     let frameId: number;
+    let lastTime = 0;
 
-    const loop = () => {
+    const loop = (timestamp: number) => {
+      const rawDt = lastTime === 0 ? 1 : (timestamp - lastTime) / 16.667;
+      const dt = Math.min(rawDt, 3);
+      lastTime = timestamp;
       // update
       if (!isGameOver.current) {
         // Jump if hand is up and dino is on ground
@@ -123,8 +127,8 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
         }
 
         // Apply gravity
-        dinoVy.current += gravity;
-        dinoY.current += dinoVy.current;
+        dinoVy.current += gravity * dt;
+        dinoY.current += dinoVy.current * dt;
 
         // Ground collision
         if (dinoY.current >= groundY) {
@@ -134,7 +138,7 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
         }
 
         // Obstacles
-        obstacleTimer.current += 1;
+        obstacleTimer.current += dt;
         if (obstacleTimer.current >= obstacleInterval) {
           spawnObstacle();
           obstacleTimer.current = 0;
@@ -143,7 +147,7 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
         obstaclesRef.current = obstaclesRef.current
           .map((obs) => ({
             ...obs,
-            x: obs.x - obstacleSpeed,
+            x: obs.x - obstacleSpeed * dt,
           }))
           .filter((obs) => obs.x + obs.w > 0); // keep if on screen
 
@@ -156,10 +160,10 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
         }
 
         // Score
-        score.current += 1;
+        score.current += dt;
       } else {
         // Auto-restart logic
-        restartTimer.current -= 1;
+        restartTimer.current -= dt;
         if (restartTimer.current <= 0) {
           resetGame();
         }
@@ -249,7 +253,7 @@ const RunnerGame: React.FC<RunnerGameProps> = ({ onBack, cameraId }) => {
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setScoreDisplay(score.current);
+      setScoreDisplay(Math.floor(score.current));
       setStatusDisplay(isGameOver.current ? "Game Over" : "Running");
     }, 250);
     return () => window.clearInterval(id);

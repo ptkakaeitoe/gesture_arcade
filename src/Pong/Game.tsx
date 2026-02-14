@@ -39,6 +39,7 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
   const scoreRef = useRef(0);
   const missesRef = useRef(0);
   const gameActive = useRef(false);
+  const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (typeof x === "number") {
@@ -63,6 +64,7 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
     ballVx.current = (Math.random() > 0.5 ? 1 : -1) * 4;
     ballVy.current = -4;
     gameActive.current = true;
+    lastTimeRef.current = 0;
   };
 
   const handleGameOver = () => {
@@ -101,7 +103,7 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
       ballVy.current = -4;
     };
 
-    const loop = () => {
+    const loop = (timestamp: number) => {
       if (!gameActive.current) {
         // If game is not active, we don't loop anymore.
         // The cleanup function will handle cancelling the current frame if needed,
@@ -109,9 +111,13 @@ const Game: React.FC<GameProps> = ({ onBack, cameraId, cameraLabel }) => {
         return;
       }
 
+      const rawDt = lastTimeRef.current === 0 ? 1 : (timestamp - lastTimeRef.current) / 16.667;
+      const dt = Math.min(rawDt, 3);
+      lastTimeRef.current = timestamp;
+
       // update ball physics
-      ballX.current += ballVx.current;
-      ballY.current += ballVy.current;
+      ballX.current += ballVx.current * dt;
+      ballY.current += ballVy.current * dt;
 
       // walls
       if (ballX.current < BALL_RADIUS || ballX.current > WIDTH - BALL_RADIUS) {

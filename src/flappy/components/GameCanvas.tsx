@@ -31,6 +31,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, updateScore }) => {
   const isMouseDown = useRef(false);
   const frameCount = useRef(0);
   const gameActive = useRef(true);
+  const lastTimeRef = useRef<number>(0);
 
   // Helper to spawn entities
   const spawnEntity = (width: number, height: number) => {
@@ -122,13 +123,17 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, updateScore }) => {
   };
 
   // Main Loop
-  const loop = useCallback(() => {
+  const loop = useCallback((timestamp: number) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     if (!gameActive.current) return;
+
+    const rawDt = lastTimeRef.current === 0 ? 1 : (timestamp - lastTimeRef.current) / 16.667;
+    const dt = Math.min(rawDt, 3);
+    lastTimeRef.current = timestamp;
 
     const width = canvas.width;
     const height = canvas.height;
@@ -164,10 +169,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, updateScore }) => {
     // Process Entities
     entities.current.forEach(ent => {
       // Physics
-      ent.x += ent.vx;
-      ent.y += ent.vy;
-      ent.vy += GRAVITY;
-      ent.rotation += ent.rotationSpeed;
+      ent.x += ent.vx * dt;
+      ent.y += ent.vy * dt;
+      ent.vy += GRAVITY * dt;
+      ent.rotation += ent.rotationSpeed * dt;
 
       // Remove off-screen
       if (ent.y > height + 100) {
@@ -236,12 +241,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, updateScore }) => {
 
     // Process Particles & Floats
     particles.current.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life = (p.life || 0) - 1;
-        
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life = (p.life || 0) - dt;
+
         if (p.type === ENTITY_TYPE.PARTICLE) {
-            p.vy += GRAVITY * 0.5;
+            p.vy += GRAVITY * 0.5 * dt;
             ctx.fillStyle = p.color;
             ctx.globalAlpha = Math.max(0, (p.life || 0) / 30);
             ctx.beginPath();
@@ -264,11 +269,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, updateScore }) => {
     particles.current = particles.current.filter(e => !e.markedForDeletion);
     
     // Blade Decay
-    bladePath.current.forEach(p => p.life = (p.life || 0) - 1);
+    bladePath.current.forEach(p => p.life = (p.life || 0) - dt);
     bladePath.current = bladePath.current.filter(p => (p.life || 0) > 0);
 
     // Spawning Logic
-    frameCount.current++;
+    frameCount.current += dt;
     // Spawn rate logic adjusted for slower gravity to keep screen populated but not overwhelmed
     const currentSpawnRate = Math.max(20, SPAWN_RATE_BASE - Math.floor(scoreRef.current / 50));
     

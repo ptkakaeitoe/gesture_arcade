@@ -59,6 +59,7 @@ const GameRenderer: React.FC<GameRendererProps> = ({
   const nextSpawnZRef = useRef(SPAWN_DISTANCE);
   const floatingTextsRef = useRef<FloatingText[]>([]);
   const lastSpeedUpRef = useRef(0);
+  const lastTimeRef = useRef<number>(0);
 
   // Lives & Invincibility
   const livesRef = useRef(1);
@@ -108,6 +109,7 @@ const GameRenderer: React.FC<GameRendererProps> = ({
     speedRef.current = initialSpeed;
     livesRef.current = initialLives;
     invincibleUntilRef.current = 0;
+    lastTimeRef.current = 0;
     onLivesUpdate(initialLives);
 
     playerRef.current = {
@@ -436,7 +438,7 @@ const GameRenderer: React.FC<GameRendererProps> = ({
 
   // Main Game Loop
   const animate = useCallback(
-    (_time: number) => {
+    (timestamp: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
@@ -456,6 +458,10 @@ const GameRenderer: React.FC<GameRendererProps> = ({
       const width = rect.width;
       const height = rect.height;
 
+      const rawDt = lastTimeRef.current === 0 ? 1 : (timestamp - lastTimeRef.current) / 16.667;
+      const dt = Math.min(rawDt, 3);
+      lastTimeRef.current = timestamp;
+
       const isInvincible = Date.now() < invincibleUntilRef.current;
 
       // --- LOGIC UPDATES ---
@@ -464,11 +470,11 @@ const GameRenderer: React.FC<GameRendererProps> = ({
 
         // Update Physics
         const targetX = p.lane * LANE_WIDTH;
-        p.x += (targetX - p.x) * LANE_SWITCH_SPEED;
+        p.x += (targetX - p.x) * (1 - Math.pow(1 - LANE_SWITCH_SPEED, dt));
 
         if (p.isJumping) {
-          p.y += p.verticalVelocity;
-          p.verticalVelocity -= GRAVITY;
+          p.y += p.verticalVelocity * dt;
+          p.verticalVelocity -= GRAVITY * dt;
           if (p.y <= 0) {
             p.y = 0;
             p.isJumping = false;
@@ -484,7 +490,7 @@ const GameRenderer: React.FC<GameRendererProps> = ({
           (obj) => obj.z + obj.depth / 2 > -500 && obj.active
         );
         activeObjects.forEach((obj) => {
-          obj.z -= gameSpeed;
+          obj.z -= gameSpeed * dt;
         });
 
         // Collision Detection
@@ -564,7 +570,7 @@ const GameRenderer: React.FC<GameRendererProps> = ({
         objectsRef.current = activeObjects;
 
         // Spawning
-        nextSpawnZRef.current -= gameSpeed;
+        nextSpawnZRef.current -= gameSpeed * dt;
         if (nextSpawnZRef.current <= SPAWN_DISTANCE - 300) {
           const lastObj = objectsRef.current[objectsRef.current.length - 1];
           // Safe check if no objects
@@ -578,9 +584,9 @@ const GameRenderer: React.FC<GameRendererProps> = ({
         }
 
         // Difficulty & Speed Up
-        scoreRef.current += gameSpeed * 0.1;
+        scoreRef.current += gameSpeed * 0.1 * dt;
         if (speedRef.current < MAX_GAME_SPEED) {
-          speedRef.current += SPEED_INCREMENT;
+          speedRef.current += SPEED_INCREMENT * dt;
           // Notify speed up every 5 units
           if (
             Math.floor(speedRef.current) > lastSpeedUpRef.current &&
@@ -981,7 +987,7 @@ const GameRenderer: React.FC<GameRendererProps> = ({
       if (damageFlashRef.current > 0) {
         ctx.fillStyle = `rgba(255, 0, 0, ${damageFlashRef.current / 20})`;
         ctx.fillRect(0, 0, width, height);
-        damageFlashRef.current--;
+        damageFlashRef.current = Math.max(0, damageFlashRef.current - dt);
       }
 
       // Sort objects from Far (Positive Z) to Near (Negative Z)
@@ -1008,8 +1014,8 @@ const GameRenderer: React.FC<GameRendererProps> = ({
         ctx.textAlign = "center";
 
         // Float up
-        t.y -= 1;
-        t.life--;
+        t.y -= dt;
+        t.life -= dt;
 
         ctx.globalAlpha = t.life / 20; // Fade out
         if (ctx.globalAlpha > 1) ctx.globalAlpha = 1;
